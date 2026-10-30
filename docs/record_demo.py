@@ -72,7 +72,7 @@ def drive() -> None:
     out(f"\r\n" * 5 + f"  {B}hantu{R}  ·  ghosts in my Mac\r\n\r\n"
         f"  {Y}{helpers}{R} are still on disk.\r\n"
         f"  No installed app claims them.\r\n\r\n"
-        f"  Oldest plist: {Y}{n['oldest']} days{R}.\r\n\r\n"
+        f"  Oldest ghost: {Y}{n['oldest']} days{R}.\r\n\r\n"
         f"  {C}Live read-only scan of {n['total']} launch plists.{R}\r\n")
     time.sleep(3.0)
 

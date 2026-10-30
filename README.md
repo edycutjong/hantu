@@ -8,7 +8,7 @@ Deleting an app does not delete everything it set up. Some installers leave a la
 
 ![hantu scanning the author's Mac: 5 root helpers with no installed app, then Gemma explaining the two public examples](docs/demo.gif)
 
-21 s, real runs on the author's Mac with `--redact` on ([recorder](docs/record_demo.py), [what it shows](evidence/demo-run.md), [MP4](docs/demo.mp4)). The only cut is 4.93 s of waiting for Gemma, labelled in the clip.
+21 s, real runs on the author's Mac with `--redact` on ([recorder](docs/record_demo.py), [what it shows](evidence/demo-run.md), [MP4](docs/demo.mp4)). The only cut is 3.43 s of waiting for Gemma, labelled in the clip.
 
 ## Install and run (30 seconds)
 

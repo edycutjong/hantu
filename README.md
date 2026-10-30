@@ -30,27 +30,27 @@ One real run, 2026-10-31, on the author's own machine. Full redacted summary: [`
 | ORPHANED (program missing) | 0 |
 | UNKNOWN (could not prove either way) | 9 |
 
-I expected dangling binaries. There are none. What stayed behind are privileged helpers: no installed app claims them any more, but the root helper is still on disk with a launchd plist that can start it. All five targets sit in `/Library/PrivilegedHelperTools`, and none of the four apps behind them (Charles, AlDente, NiceHash, Adobe Acrobat) is installed: I checked by hand with Spotlight and `/Applications`. (A first version of the rule also flagged macFUSE, which installs its app inside a filesystem bundle, not in `/Applications`. That is now handled, and is why the rule is only a rule.)
+I expected dangling binaries. There are none. What stayed behind are privileged helpers: no installed app claims them any more, but the root helper is still on disk with a launchd plist that can start it. All five targets sit in `/Library/PrivilegedHelperTools`, and no app that matches them by bundle id (Charles, AlDente, NiceHash, Adobe Acrobat) is installed: I checked by hand with Spotlight and `/Applications`. (A first version of the rule also flagged macFUSE, which installs its app inside a filesystem bundle, not in `/Applications`. That is now handled, and is why the rule is only a rule.)
 
 ## How it decides (code) and what the model does
 
 | Verdict | Rule, in code |
 |---|---|
 | `ORPHANED` | the program launchd would start is missing (for `sh -c`, `python script.py` and similar, the script is what is checked) |
-| `HALF-GHOST` | the program exists, but no installed app claims it: the plist's `AssociatedBundleIdentifiers` match no installed app, or (when it has none) a helper in `/Library/PrivilegedHelperTools` is declared (`SMPrivilegedExecutables`) by no installed app. `com.apple.*` ids always count as installed, and a program inside an existing `.app` is never flagged. If the list of installed apps cannot be read (fewer than 5 readable app `Info.plist` files), hantu makes no HALF-GHOST calls at all |
+| `HALF-GHOST` | the program exists, but no installed app claims it: the plist's `AssociatedBundleIdentifiers` match no installed app, or (when it has none) a helper in `/Library/PrivilegedHelperTools` is neither declared (`SMPrivilegedExecutables`) nor shipped (`Contents/Library/LaunchServices`) by any installed app. `com.apple.*` ids always count as installed, and a program inside an existing `.app` is never flagged. If the list of installed apps cannot be read (fewer than 5 readable app `Info.plist` files), hantu makes no HALF-GHOST calls at all |
 | `ALIVE` | the program exists and nothing shows its owner is gone (hantu looks for an owner only when the plist names one, or the program is in `/Library/PrivilegedHelperTools`) |
 | `UNKNOWN` | malformed or empty plist, no program to launch, `BundleProgram`, a relative path with no absolute `WorkingDirectory`, a bare command not on launchd's PATH, a script argument that looks like a classpath or glob, an unreadable path, a target on a `/Volumes` disk that may just be unmounted. Never counted as a ghost |
 
 Gemma (`google/gemma-4-31b-it:free` on OpenRouter, falling back to `gemma-4-26b-a4b-it:free`) is given the plist, the verdict, the reason string and the plist's age, and returns strict JSON: one sentence and a risk score from 1 to 5 per ghost. The reply is validated (ids, ranges, risk 1-5, non-empty text, truncated to a fixed length); invalid items are dropped, and the model has no field in which it could change a verdict.
 
-`explain` sends data off your machine: for each ghost, the plist (at most 1200 characters), its file name, age, verdict and reason go to OpenRouter and the Gemma host. Before sending, `/Users/<name>` becomes `~`, `EnvironmentVariables` values are masked, and `UserName`/`GroupName` are dropped. Everything else, including `ProgramArguments`, is sent as written, because labels and paths are the point. `scan` sends nothing anywhere. `report` sends nothing unless you add `--explain`; with `--redact` that sends only the at most three well-known-vendor examples.
+`explain` sends data off your machine: for each ghost, the plist (at most 1200 characters), its file name, age, verdict and reason go to OpenRouter and the Gemma host. Before sending, `/Users/<name>` becomes `~`, `EnvironmentVariables` values are masked, and `UserName`, `GroupName`, `SessionCreate` and `StandardInPath` are dropped. Everything else, including `ProgramArguments`, is sent as written (re-serialised as XML), because labels and paths are the point. `scan` sends nothing anywhere. `report` sends nothing unless you add `--explain`; with `--redact` that sends only the at most three well-known-vendor examples.
 
 ## Safety
 
 - Scanning is read-only. It reads plists, `codesign -dv` and `launchctl list`. It never writes.
 - Nothing is changed unless you pass **both** `--clean` and `--yes`. `hantu scan --clean` alone prints the plan.
 - `--clean` only touches `ORPHANED` agents in your own `~/Library/LaunchAgents`. It never touches `/Library` (that needs root), and it never touches HALF-GHOSTs.
-- Files are moved to `~/.hantu/quarantine/<timestamp>/` with a `manifest.json`, not deleted. Undo is `mv` back. If the agent was loaded, `--yes` also runs `launchctl bootout` for it after the move; putting the plist back should not restart it until the next login or a `launchctl bootstrap`.
+- Files are moved to `~/.hantu/quarantine/<timestamp>/` with a `manifest.json`, not deleted. Undo is `mv` back. If the agent was loaded, `--yes` also runs `launchctl bootout` for it after the move; putting the plist back may not restart it until the next login or a `launchctl bootstrap`.
 - The clean path is tested on fixture plists in temp directories only. It has not been run against a real machine.
 
 ## Tests

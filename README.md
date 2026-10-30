@@ -15,7 +15,7 @@ hantu explain          # Gemma writes one line per ghost and ranks them 1-5
 hantu report --md      # Markdown report (add --redact for a publication-safe one)
 ```
 
-Python 3.9+, standard library only, macOS only.
+Python 3.9+ (tested on 3.11), standard library only, macOS only.
 
 ## What it found on my Mac
 

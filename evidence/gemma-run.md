@@ -17,6 +17,13 @@ Ghosts explained: 5 of 5. Showing well-known vendors only, one per vendor, max 3
 
 ## How this run was made
 
-The free ids (`google/gemma-4-31b-it:free`, then `google/gemma-4-26b-a4b-it:free`) answered HTTP 429 (rate limited) every time they were tried that night. This run used `hantu explain --model google/gemma-4-31b-it`: the same open-weights model, through OpenRouter's paid listing. It took about 13 seconds and cost $0.00046 (the key's usage before and after the run).
+The free ids (`google/gemma-4-31b-it:free`, then `google/gemma-4-26b-a4b-it:free`) answered HTTP 429 (rate limited) every time they were tried that night. This run used `hantu explain --model google/gemma-4-31b-it`: the same open-weights model, through OpenRouter's paid listing. It took about 13 seconds (`time`: 13.5 s wall clock) and cost $0.00046: the key's usage read $1.130773 just before the run and $1.131232 after, with nothing else using the key in between.
+
+A probe at 03:46 local time (a one-line prompt, no plist data) got the same answer from both free ids:
+
+```text
+google/gemma-4-31b-it:free      HTTP 429  "google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry sh..."
+google/gemma-4-26b-a4b-it:free  HTTP 429  "google/gemma-4-26b-a4b-it:free is temporarily rate-limited upstream. Please retry sh..."
+```
 
 The same night, OpenRouter's endpoint list for `google/gemma-4-31b-it` (`/api/v1/models/google/gemma-4-31b-it/endpoints`) showed 16 endpoints from 13 different providers serving these open weights.

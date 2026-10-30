@@ -71,8 +71,8 @@ def drive() -> None:
     helpers = f"{n['root']} root helpers" if n["root"] == n["ghosts"] else f"{n['ghosts']} helpers"
     out(f"\r\n" * 5 + f"  {B}hantu{R}  ·  ghosts in my Mac\r\n\r\n"
         f"  {Y}{helpers}{R} are still on disk.\r\n"
-        f"  No installed app claims them.\r\n\r\n"
-        f"  Oldest ghost: {Y}{n['oldest']} days{R}.\r\n\r\n"
+        f"  No installed app declares them.\r\n\r\n"
+        f"  Oldest ghost: plist untouched for {Y}{n['oldest']} days{R}.\r\n\r\n"
         f"  {C}Live read-only scan of {n['total']} launch plists.{R}\r\n")
     time.sleep(3.0)
 
@@ -85,7 +85,7 @@ def drive() -> None:
     secs = run(shown, [HANTU, "explain", "--redact", "--model", MODEL], marker=True)
     log["explain_s"] = round(secs, 2)
     out(f"{C}# ran live in {secs:.1f} s; clip trims the wait to {KEEP} s{R}\r\n")
-    time.sleep(4.0)
+    time.sleep(5.0)
 
     clear()
     out(f"\r\n" * 6 + f"  {B}hantu{R} is read-only by default.\r\n"

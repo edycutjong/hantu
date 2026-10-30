@@ -69,7 +69,7 @@ Gemma (`google/gemma-4-31b-it:free` on OpenRouter, falling back to `gemma-4-26b-
 pip install pytest && pytest
 ```
 
-85 tests over fixture plists: orphaned, half-ghost, alive, malformed, empty stub, relative paths, `~` expansion, interpreters, `/Volumes`; the Gemma reply validator, retry and fallback paths with a fake transport; the clean path; the CLI, including `--redact` and the narrow-terminal layout. The suite fails any test that tries to reach the network.
+86 tests over fixture plists: orphaned, half-ghost, alive, malformed, empty stub, relative paths, `~` expansion, interpreters, `/Volumes`; the Gemma reply validator, retry and fallback paths with a fake transport; the clean path; the CLI, including `--redact` and the narrow-terminal layout. The suite fails any test that tries to reach the network.
 
 ## Limits
 

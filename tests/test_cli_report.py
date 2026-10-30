@@ -119,7 +119,7 @@ def test_cli_explain_prints_ranked_ghosts(fixture_dir, monkeypatch, capsys):
     assert cli.main(["explain", "--dir", str(fixture_dir), "--no-codesign"]) == 0
     out = capsys.readouterr().out
     assert out.index("[5/5]") < out.index("[2/5]")
-    assert "classification by code; explanation by google/gemma-4-31b-it:free" in out
+    assert "classification by code; risk [n/5] and explanation by google/gemma-4-31b-it:free" in out
 
 
 def test_report_explain_redact_sends_only_public_examples(fixture_dir, monkeypatch, tmp_path, capsys):
@@ -185,3 +185,14 @@ def test_explain_redact_sends_and_shows_only_public_examples(fixture_dir, monkey
     assert sorted(sent) == ["com.dropbox.updater", "com.google.keystone.agent"]
     assert "net.secret.vendor" not in out and "com.google.other" not in out
     assert "sent 2 of 4 ghosts" in out and "2 never left this Mac" in out
+
+
+def test_narrow_layout_names_the_folder_once_when_file_matches_label(tmp_path, monkeypatch, capsys):
+    d = tmp_path / "LaunchDaemons"
+    helper = tmp_path / "PrivilegedHelperTools" / "com.xk72.charles.ProxyHelper"
+    make_exe(helper)
+    write_plist(d, "h.plist", {"Label": "com.xk72.charles.ProxyHelper", "Program": str(helper)})
+    monkeypatch.setattr(cli, "_width", lambda: 56)
+    assert cli.main(["scan", "--dir", str(d), "--no-codesign"]) == 0
+    out = capsys.readouterr().out
+    assert "PrivilegedHelperTools/ (same name)" in out and out.count("com.xk72.charles.ProxyHelper") == 1

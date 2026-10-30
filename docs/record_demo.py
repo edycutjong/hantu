@@ -2,7 +2,7 @@
 
     asciinema rec -f asciicast-v2 --headless --window-size 56x20 -c "python3 docs/record_demo.py drive" raw.cast
     python3 docs/record_demo.py trim raw.cast demo.cast      # cuts only the Gemma wait, which is labelled on screen
-    agg --font-size 32 --line-height 1.35 --theme github-dark --last-frame-duration 4.5 demo.cast docs/demo.gif
+    agg --font-size 32 --line-height 1.35 --theme github-dark --last-frame-duration 3.5 demo.cast docs/demo.gif
 
 `drive` prints its own "$ " prompt, types each command at a fixed pace, then runs it for real. The opening card is
 built from a live `hantu scan --json` run made at that moment; nothing on screen is typed in by hand.
@@ -73,24 +73,24 @@ def drive() -> None:
         f"  {Y}{helpers}{R} are still on disk.\r\n"
         f"  No installed app claims them.\r\n\r\n"
         f"  Oldest plist: {Y}{n['oldest']} days{R}.\r\n\r\n"
-        f"  {C}{n['total']} launch plists scanned, read-only.{R}\r\n")
+        f"  {C}Live read-only scan of {n['total']} launch plists.{R}\r\n")
     time.sleep(3.0)
 
     clear()
     log["scan_s"] = round(run("hantu scan --ghosts --redact", [HANTU, "scan", "--ghosts", "--redact"]), 2)
-    time.sleep(4.2)
+    time.sleep(4.5)
 
     clear()
     shown = f"hantu explain --redact --model {MODEL}"
     secs = run(shown, [HANTU, "explain", "--redact", "--model", MODEL], marker=True)
     log["explain_s"] = round(secs, 2)
     out(f"{C}# ran live in {secs:.1f} s; clip trims the wait to {KEEP} s{R}\r\n")
-    time.sleep(4.8)
+    time.sleep(4.0)
 
     clear()
     out(f"\r\n" * 6 + f"  {B}hantu{R} is read-only by default.\r\n"
         f"  Nothing moves unless you add {B}--clean --yes{R}.\r\n\r\n"
-        f"  {D}${R} {B}pipx install git+https://github.com/edycutjong/hantu{R}\r\n\r\n"
+        f"  {B}pipx install git+https://github.com/edycutjong/hantu{R}\r\n\r\n"
         f"  {Y}github.com/edycutjong/hantu{R}\r\n"
         f"  {C}MIT · Python stdlib · Gemma 4 via OpenRouter{R}\r\n")
     time.sleep(4.5)

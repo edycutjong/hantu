@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shlex
 import shutil
@@ -68,6 +69,9 @@ def _print_table(agents: List[Agent], only_ghosts: bool, redact: bool = False, w
                 print(f"{' ' * 18}{reason}")
         else:
             print(head + label)
+            folder, name = os.path.split(target)
+            if name and name == label:  # a helper named after its label: say the folder once, not the name twice
+                target = f"{folder}/ (same name)"
             for line in _wrap(f"-> {target}", width, " " * 3, " " * 6) + (_wrap(reason, width, " " * 3) if reason else []):
                 print(line)
     sm = summarize(agents)
@@ -132,7 +136,7 @@ def cmd_explain(args) -> int:
         print(f"[{ex.risk if ex else '-'}/5] {a.verdict}  {a.label}  ({a.age_days}d)")
         for line in _wrap(clean(ex.explanation) if ex else "(no valid explanation)", max(width, 40), " " * 6):
             print(line)
-    tail = [f"classification by code; explanation by {', '.join(res.model_used) or 'no model'}."]
+    tail = [f"classification by code; risk [n/5] and explanation by {', '.join(res.model_used) or 'no model'}."]
     if args.redact:
         tail.append(f"--redact: sent {len(ghosts)} of {n_all} ghosts (public vendor list); "
                     f"{n_all - len(ghosts)} never left this Mac.")

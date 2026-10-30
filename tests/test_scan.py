@@ -288,3 +288,24 @@ def test_app_index_finds_vendor_folders_and_nested_helpers(tmp_path):
     app(root / "Main.app" / "Contents" / "Helpers" / "Helper.app", "com.main.helper")
     idx = S.build_app_index([str(root)])
     assert {"com.vendor.tool", "com.main.helper"} <= idx.ids and idx.apps == 2
+
+
+def test_runs_as_root_only_for_daemons_without_a_user(agents_dir, tmp_path):
+    exe = make_exe(tmp_path / "d")
+    def daemon(name, **extra):
+        return classify(write_plist(agents_dir, name, {"Label": name, "Program": exe, **extra}), "system-daemon", AppIndex(), now=NOW, signer=None)
+    assert daemon("a.plist").runs_as_root is True
+    assert daemon("b.plist", UserName="root").runs_as_root is True
+    assert daemon("c.plist", UserName="_www").runs_as_root is False
+    assert run(write_plist(agents_dir, "d.plist", {"Label": "x", "Program": exe})).runs_as_root is None  # not a daemon
+
+
+def test_default_app_index_reads_extra_install_locations(tmp_path, monkeypatch):
+    import plistlib
+    fs = tmp_path / "Filesystems" / "thing.fs" / "Contents" / "Resources" / "Thing.app" / "Contents"
+    fs.mkdir(parents=True)
+    with open(fs / "Info.plist", "wb") as f:
+        plistlib.dump({"CFBundleIdentifier": "org.thing.app"}, f)
+    monkeypatch.setattr(S, "APP_DIRS", [str(tmp_path / "none")])
+    monkeypatch.setattr(S, "EXTRA_APP_GLOBS", [str(tmp_path / "Filesystems" / "*" / "Contents" / "Resources" / "*.app")])
+    assert S.build_app_index().ids == {"org.thing.app"}

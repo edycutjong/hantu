@@ -9,7 +9,8 @@ The raw output (full labels and paths) is deliberately not in this repo.
 - ALIVE: **44**
 - UNKNOWN (could not prove either way): **9**
 - Oldest ghost: **1549 days** since its plist was last modified; median 1096 days
-- Ghosts that are launch daemons (launchd runs these as root when triggered): **5**
+- Ghosts that are launch daemons running as root (no UserName in the plist): **5**
+- Ghost programs sitting in /Library/PrivilegedHelperTools: **5**
 - Ghosts set to run at load: 1; KeepAlive: 0
 
 ## By folder

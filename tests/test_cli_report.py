@@ -79,6 +79,7 @@ def test_redacted_report_is_publication_safe(fixture_dir, tmp_path, monkeypatch)
     assert "`com.google.keystone.agent`" in md
     assert md.count("- `com.") <= 3                       # at most 3 named examples
     assert "ORPHANED (program gone): **4**" in md
+    assert "running as root" not in md                     # user-folder agents are not root daemons
 
 
 def test_public_examples_one_per_vendor_oldest_first(fixture_dir):

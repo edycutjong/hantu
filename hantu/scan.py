@@ -59,6 +59,7 @@ class Agent:
     run_at_load: Optional[bool] = None
     keep_alive: Optional[bool] = None
     disabled: Optional[bool] = None
+    runs_as_root: Optional[bool] = None  # launch daemon with no UserName (or UserName=root)
     team: Optional[str] = None
     loaded: Optional[bool] = None
     last_exit: Optional[int] = None
@@ -263,6 +264,8 @@ def classify(
     ka = data.get("KeepAlive")
     ag.keep_alive = bool(ka) if isinstance(ka, (bool, dict)) else None
     ag.disabled = data.get("Disabled") if isinstance(data.get("Disabled"), bool) else None
+    if source == "system-daemon":
+        ag.runs_as_root = data.get("UserName") in (None, "", "root")
     ids = data.get("AssociatedBundleIdentifiers")
     if isinstance(ids, str):
         ids = [ids]

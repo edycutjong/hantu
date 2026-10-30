@@ -70,9 +70,12 @@ def render_markdown(
     if ghosts:
         ages = [a.age_days for a in ghosts]
         L += [f"- Oldest ghost: **{max(ages)} days** since its plist was last modified; median {_median(ages)} days"]
-        root = sum(1 for a in ghosts if a.source == "system-daemon")
+        root = sum(1 for a in ghosts if a.runs_as_root)
         if root:
-            L += [f"- Ghosts that are launch daemons (launchd runs these as root when triggered): **{root}**"]
+            L += [f"- Ghosts that are launch daemons running as root (no UserName in the plist): **{root}**"]
+        helpers = sum(1 for a in ghosts if (a.target or "").startswith("/Library/PrivilegedHelperTools/"))
+        if helpers:
+            L += [f"- Ghost programs sitting in /Library/PrivilegedHelperTools: **{helpers}**"]
         L += [f"- Ghosts set to run at load: {sum(1 for a in ghosts if a.run_at_load)}; KeepAlive: {sum(1 for a in ghosts if a.keep_alive)}"]
         known = [a for a in ghosts if a.loaded is not None]
         if known:

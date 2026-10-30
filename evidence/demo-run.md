@@ -8,10 +8,10 @@
   `hantu scan --ghosts --redact`, `hantu explain --redact --model google/gemma-4-31b-it`. All read-only. `--clean` was not run.
 - Live timings: scan 1.5 s; explain 7.7 s (the scan inside it plus one Gemma call for the 2 public examples).
 - One speed-up: the clip keeps 0.8 s of the explain wait and cuts the other 6.92 s. The clip says so on screen.
-- Model: `google/gemma-4-31b-it` on OpenRouter (the free ids were rate-limited, as in [`gemma-run.md`](gemma-run.md)).
+- Model: `google/gemma-4-31b-it` on OpenRouter (as in [`gemma-run.md`](gemma-run.md), where the free ids were rate-limited).
   Model output varies run to run; the two lines below are this take's.
 - Redaction is the CLI's own `--redact` (tested): only Charles and one Adobe label are named; 3 ghosts are
-  `[label withheld]` and their plists were not sent to the model. No frame was edited by hand.
+  `[label withheld]` and their plists were not sent to the model. No frame was edited by hand: `agg` renders the GIF straight from the recorded terminal session, and ffmpeg converts it to MP4.
 
 ## Everything the clip shows (colours stripped)
 

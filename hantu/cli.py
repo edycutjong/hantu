@@ -4,16 +4,37 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shlex
+import shutil
 import sys
 from typing import List, Optional
 
 from . import __version__, clean as cleanmod
 from .explain import ExplainError, explain, rank
-from .report import public_examples, render_markdown
+from .report import home_to_tilde, public_examples, render_markdown
 from .scan import ALIVE, HALF_GHOST, ORPHANED, UNKNOWN, Agent, scan, summarize
 
 COLORS = {ORPHANED: "31", HALF_GHOST: "33", ALIVE: "32", UNKNOWN: "90"}
+WITHHELD = "[label withheld]"
+NARROW = 100  # below this many columns, stack each row instead of one long line
+
+
+def _width() -> int:
+    return shutil.get_terminal_size((120, 24)).columns
+
+
+def _wrap(text: str, width: int, indent: str = "", hang: Optional[str] = None, slash: bool = True) -> List[str]:
+    """Greedy wrap that may also break after '/', so long paths fold instead of overflowing."""
+    lines, cur = [], indent
+    for piece in re.split(r"(?<=[/ ])" if slash else r"(?<= )", text):
+        if cur.strip() and len(cur) + len(piece.rstrip()) > width:
+            lines.append(cur.rstrip())
+            cur = indent if hang is None else hang
+        cur += piece
+    if cur.strip():
+        lines.append(cur.rstrip())
+    return lines or [indent.rstrip()]
 
 
 def _paint(text: str, verdict: str, tty: bool) -> str:
@@ -26,19 +47,34 @@ def _do_scan(args) -> List[Agent]:
                 use_launchctl=not args.no_launchctl and not args.dir)
 
 
-def _print_table(agents: List[Agent], only_ghosts: bool) -> None:
+def _print_table(agents: List[Agent], only_ghosts: bool, redact: bool = False, width: Optional[int] = None) -> None:
     tty = sys.stdout.isatty()
+    width = width or _width()
+    public = {a.path for a in public_examples(agents)} if redact else set()
     rows = [a for a in agents if not only_ghosts or a.verdict in (ORPHANED, HALF_GHOST)]
     rows.sort(key=lambda a: (a.verdict != ORPHANED, a.verdict != HALF_GHOST, -a.age_days))
     for a in rows:
-        print(f"{_paint(a.verdict.ljust(10), a.verdict, tty)} {str(a.age_days).rjust(5)}d  "
-              f"{a.label or '(no label)'}  ->  {a.target or a.program or '?'}")
-        if a.verdict != ALIVE:
-            print(f"{' ' * 18}{a.reason}")
+        head = f"{_paint(a.verdict.ljust(10), a.verdict, tty)} {str(a.age_days).rjust(5)}d  "
+        if redact and a.path not in public:  # label, path and reason can all name the app
+            print(head + WITHHELD)
+            continue
+        label, target = a.label or "(no label)", a.target or a.program or "?"
+        reason = a.reason if a.verdict != ALIVE else ""
+        if redact:
+            target, reason = home_to_tilde(target), home_to_tilde(reason)
+        if width >= NARROW:
+            print(f"{head}{label}  ->  {target}")
+            if reason:
+                print(f"{' ' * 18}{reason}")
+        else:
+            print(head + label)
+            for line in _wrap(f"-> {target}", width, " " * 3, " " * 6) + (_wrap(reason, width, " " * 3) if reason else []):
+                print(line)
     sm = summarize(agents)
     c = sm["counts"]
-    print(f"\n{sm['total']} plists: {c[ORPHANED]} orphaned, {c[HALF_GHOST]} half-ghost, "
-          f"{c[ALIVE]} alive, {c[UNKNOWN]} unknown. Nothing was changed.")
+    counts = (f"{sm['total']} plists: {c[ORPHANED]} orphaned, {c[HALF_GHOST]} half-ghost, ",
+              f"{c[ALIVE]} alive, {c[UNKNOWN]} unknown. ", "Nothing was changed.")
+    print("\n" + ("".join(counts) if width >= NARROW else "\n".join(x.strip() for x in counts)))
 
 
 def cmd_scan(args) -> int:
@@ -47,7 +83,7 @@ def cmd_scan(args) -> int:
         json.dump({"summary": summarize(agents), "agents": [a.to_dict() for a in agents]}, sys.stdout, indent=2)
         print()
     else:
-        _print_table(agents, args.ghosts)
+        _print_table(agents, args.ghosts, redact=args.redact)
     if args.clean:
         qdir = cleanmod.default_quarantine()
         acts = cleanmod.plan(agents, "~/Library/LaunchAgents", qdir)
@@ -66,11 +102,17 @@ def cmd_scan(args) -> int:
 
 
 def cmd_explain(args) -> int:
-    ghosts = [a for a in _do_scan(args) if a.verdict in (ORPHANED, HALF_GHOST)]
+    agents = _do_scan(args)
+    ghosts = [a for a in agents if a.verdict in (ORPHANED, HALF_GHOST)]
     if not ghosts:
         print("No ghosts found. Nothing to explain.")
         return 0
-    ghosts = ghosts[: args.limit]
+    n_all = len(ghosts)
+    # --redact: only what may be named in public leaves the machine
+    ghosts = public_examples(agents) if args.redact else ghosts[: args.limit]
+    if not ghosts:
+        print(f"--redact: none of the {n_all} ghosts is on the public vendor list; nothing was sent.")
+        return 0
     try:
         res = explain(ghosts, models=[args.model] if args.model else None)
     except ExplainError as e:
@@ -83,13 +125,22 @@ def cmd_explain(args) -> int:
                               for a in ordered]}, sys.stdout, indent=2)
         print()
         return 0
+    clean = home_to_tilde if args.redact else (lambda t: t)
+    width = _width()
     for a in ordered:
         ex = res.items.get(a.path)
         print(f"[{ex.risk if ex else '-'}/5] {a.verdict}  {a.label}  ({a.age_days}d)")
-        print(f"      {ex.explanation if ex else '(no valid explanation)'}")
-    print(f"\nclassification by code; explanation by {', '.join(res.model_used) or 'no model'}.")
+        for line in _wrap(clean(ex.explanation) if ex else "(no valid explanation)", max(width, 40), " " * 6):
+            print(line)
+    tail = [f"classification by code; explanation by {', '.join(res.model_used) or 'no model'}."]
+    if args.redact:
+        tail.append(f"--redact: sent {len(ghosts)} of {n_all} ghosts (public vendor list); "
+                    f"{n_all - len(ghosts)} never left this Mac.")
+    print()
+    for t in tail:
+        print("\n".join(_wrap(t, max(width, 40), slash=False)))
     for p in res.problems:
-        print(f"note: {p}", file=sys.stderr)
+        print(f"note: {clean(p)}", file=sys.stderr)
     return 0
 
 
@@ -127,11 +178,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--ghosts", action="store_true", help="only list ghosts")
     s.add_argument("--clean", action="store_true", help="plan to quarantine ORPHANED user agents (dry run unless --yes)")
     s.add_argument("--yes", action="store_true", help="with --clean: actually do it")
+    s.add_argument("--redact", action="store_true", help="screen-safe: name only well-known vendors, home path as ~")
     s.set_defaults(fn=cmd_scan)
     e = sub.add_parser("explain", parents=[common], help="Gemma explains and ranks the ghosts")
     e.add_argument("--model", help="OpenRouter model id (default: Gemma 4 31B, then Gemma 4 26B)")
     e.add_argument("--limit", type=int, default=40)
     e.add_argument("--json", action="store_true")
+    e.add_argument("--redact", action="store_true", help="send and show only well-known vendors (one per vendor)")
     e.set_defaults(fn=cmd_explain)
     r = sub.add_parser("report", parents=[common], help="Markdown report")
     r.add_argument("--md", action="store_true", help="(default) Markdown output")
@@ -153,5 +206,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
     if getattr(args, "yes", False) and not getattr(args, "clean", False):
         print("hantu: --yes only means something with --clean", file=sys.stderr)
+        return 2
+    if getattr(args, "redact", False) and args.cmd in ("scan", "explain") and (
+            getattr(args, "json", False) or getattr(args, "clean", False)):
+        print("hantu: --redact is for the screen output; it does not combine with --json or --clean", file=sys.stderr)
         return 2
     return args.fn(args)

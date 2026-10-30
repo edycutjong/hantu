@@ -130,3 +130,58 @@ def test_report_explain_redact_sends_only_public_examples(fixture_dir, monkeypat
     monkeypatch.setattr(cli, "explain", fake_explain)
     assert cli.main(["report", "--redact", "--explain", "--dir", str(fixture_dir), "--no-codesign"]) == 0
     assert "net.secret.vendor" not in sent and sent
+
+
+def test_scan_redact_withholds_all_but_public_examples(fixture_dir, capsys):
+    assert cli.main(["scan", "--ghosts", "--redact", "--dir", str(fixture_dir), "--no-codesign"]) == 0
+    out = capsys.readouterr().out
+    assert "com.google.keystone.agent" in out and "com.dropbox.updater" in out
+    assert "net.secret.vendor" not in out and "com.google.other" not in out   # one per vendor
+    assert out.count("[label withheld]") == 2
+    assert "gone3" not in out and "gone2" not in out                           # withheld rows show no path
+    assert "4 orphaned" in out and "Nothing was changed." in out
+
+
+def test_scan_redact_rewrites_home(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    d = tmp_path / "Library" / "LaunchAgents"
+    write_plist(d, "g.plist", {"Label": "com.google.keystone.agent", "ProgramArguments": [str(tmp_path / "gone")]})
+    assert cli.main(["scan", "--redact", "--dir", str(d), "--no-codesign"]) == 0
+    out = capsys.readouterr().out
+    assert "~/gone" in out and str(tmp_path) not in out
+
+
+def test_redact_refuses_json_and_clean(fixture_dir, capsys):
+    assert cli.main(["scan", "--redact", "--json", "--dir", str(fixture_dir)]) == 2
+    assert cli.main(["scan", "--redact", "--clean", "--dir", str(fixture_dir)]) == 2
+    assert cli.main(["explain", "--redact", "--json", "--dir", str(fixture_dir)]) == 2
+
+
+def test_narrow_terminal_stacks_rows_and_folds_paths(fixture_dir, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "_width", lambda: 52)
+    assert cli.main(["scan", "--ghosts", "--dir", str(fixture_dir), "--no-codesign"]) == 0
+    out = capsys.readouterr().out
+    assert "  ->  " not in out and "   -> " in out
+    long_lines = [l for l in out.splitlines() if len(l) > 52 and "/" not in l]
+    assert not long_lines                                  # only an unbreakable path segment may overflow
+    assert "Nothing was changed." in out
+
+
+def test_wrap_breaks_after_slash():
+    assert cli._wrap("-> /Library/PrivilegedHelperTools/com.xk72.charles.ProxyHelper", 40, "   ") == [
+        "   -> /Library/PrivilegedHelperTools/", "   com.xk72.charles.ProxyHelper"]
+    assert cli._wrap("-> /Library/PrivilegedHelperTools/com.xk72.charles.ProxyHelper", 40, "   ", "      ")[1] == \
+        "      com.xk72.charles.ProxyHelper"
+
+
+def test_explain_redact_sends_and_shows_only_public_examples(fixture_dir, monkeypatch, capsys):
+    sent = []
+    def fake_explain(ghosts, models=None, **kw):
+        sent.extend(g.label for g in ghosts)
+        return ExplainResult(items={g.path: Explanation(f"about {g.label}", 3, "") for g in ghosts}, model_used=["m"])
+    monkeypatch.setattr(cli, "explain", fake_explain)
+    assert cli.main(["explain", "--redact", "--dir", str(fixture_dir), "--no-codesign"]) == 0
+    out = capsys.readouterr().out
+    assert sorted(sent) == ["com.dropbox.updater", "com.google.keystone.agent"]
+    assert "net.secret.vendor" not in out and "com.google.other" not in out
+    assert "sent 2 of 4 ghosts" in out and "2 never left this Mac" in out

@@ -15,6 +15,8 @@ hantu explain          # Gemma writes one line per ghost and ranks them 1-5
 hantu report --md      # Markdown report (add --redact for a publication-safe one)
 ```
 
+Recording or screen-sharing? `hantu scan --redact` and `hantu explain --redact` name only well-known vendors (one per vendor), show the rest as `[label withheld]` and print your home folder as `~`. `explain --redact` also sends only those few to the model. In a terminal narrower than 100 columns, rows stack and long paths fold so they stay readable.
+
 Python 3.9+ (tested on 3.11), standard library only, macOS only.
 
 ## What it found on my Mac
@@ -61,7 +63,7 @@ Gemma (`google/gemma-4-31b-it:free` on OpenRouter, falling back to `gemma-4-26b-
 pip install pytest && pytest
 ```
 
-79 tests over fixture plists: orphaned, half-ghost, alive, malformed, empty stub, relative paths, `~` expansion, interpreters, `/Volumes`; the Gemma reply validator, retry and fallback paths with a fake transport; the clean path; the CLI. The suite fails any test that tries to reach the network.
+85 tests over fixture plists: orphaned, half-ghost, alive, malformed, empty stub, relative paths, `~` expansion, interpreters, `/Volumes`; the Gemma reply validator, retry and fallback paths with a fake transport; the clean path; the CLI, including `--redact` and the narrow-terminal layout. The suite fails any test that tries to reach the network.
 
 ## Limits
 

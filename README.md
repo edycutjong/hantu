@@ -4,6 +4,12 @@
 
 Deleting an app does not delete everything it set up. Some installers leave a launchd plist behind that can still start a helper, sometimes as root, years later. `hantu` lists them.
 
+## Demo
+
+![hantu scanning the author's Mac: 5 root helpers with no installed app, then Gemma explaining the two public examples](docs/demo.gif)
+
+23 s, real runs on the author's Mac with `--redact` on ([recorder](docs/record_demo.py), [what it shows](evidence/demo-run.md), [MP4](docs/demo.mp4)). The only cut is 4.55 s of waiting for Gemma, labelled in the clip.
+
 ## Install and run (30 seconds)
 
 ```bash

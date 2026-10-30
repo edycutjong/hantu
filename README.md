@@ -32,6 +32,8 @@ One real run, 2026-10-31, on the author's own machine. Full redacted summary: [`
 
 I expected dangling binaries. There are none. What stayed behind are privileged helpers: no installed app claims them any more, but the root helper is still on disk with a launchd plist that can start it. All five targets sit in `/Library/PrivilegedHelperTools`, and no app that matches them by bundle id (Charles, AlDente, NiceHash, Adobe Acrobat) is installed: I checked by hand with Spotlight and `/Applications`. (A first version of the rule also flagged macFUSE, which installs its app inside a filesystem bundle, not in `/Applications`. That is now handled, and is why the rule is only a rule.)
 
+Then Gemma read the five plists ([`evidence/gemma-run.md`](evidence/gemma-run.md)). It ranked one ghost 4 out of 5, the oldest, which is also the only one set to run at load, and the other four 3 out of 5, all with the same one-line reason: "Runs as a privileged daemon with root-level access."
+
 ## How it decides (code) and what the model does
 
 | Verdict | Rule, in code |
@@ -66,7 +68,7 @@ pip install pytest && pytest
 - Login items (System Settings > General > Login Items) are not scanned: listing them needs privileges or a permission prompt.
 - Launch daemons cannot be checked for "currently loaded" without root, so hantu does not say whether a ghost daemon is running right now.
 - HALF-GHOST is a rule, not a proof. An app that lives outside the places hantu looks (`/Applications`, `~/Applications`, `/System/Applications` and its `Utilities` folder, each also one folder down, plus a few vendor locations), or a helper that its app installs without declaring it, will look like a ghost. Read the line before you remove anything. `--clean` never acts on HALF-GHOSTs for that reason.
-- Free Gemma endpoints on OpenRouter are rate-limited; `explain` retries with backoff and falls back to the second model.
+- Free Gemma endpoints on OpenRouter are rate-limited; `explain` retries with backoff and falls back to the second model. When both free ids were rate-limited, `hantu explain --model google/gemma-4-31b-it` ran the same model through OpenRouter's paid listing: the run above cost $0.00046.
 
 ## License
 
